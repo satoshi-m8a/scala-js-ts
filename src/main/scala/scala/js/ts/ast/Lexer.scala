@@ -1,6 +1,5 @@
 package scala.js.ts.ast
 
-import scala.util.parsing.combinator.ImplicitConversions
-import scala.util.parsing.combinator.lexical.StdLexical
+import scala.js.es6.ast.Es6Lexer
 
-class Lexer extends StdLexical with ImplicitConversions
+class Lexer extends Es6Lexer

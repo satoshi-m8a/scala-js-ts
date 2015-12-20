@@ -1,12 +1,10 @@
 package scala.js.ts.ast
 
-import scala.util.parsing.combinator.ImplicitConversions
-import scala.util.parsing.combinator.syntactical.StdTokenParsers
+import scala.js.es6.ast.Es6Parser
 
-class Parser extends StdTokenParsers with ImplicitConversions {
+class Parser extends Es6Parser {
 
-  type Tokens = Lexer
-  val lexical = new Tokens
+  override val lexical = new Tokens
 
   lexical.reserved ++= List(
     "declare", "module", "var", "interface"
@@ -33,13 +31,6 @@ class Parser extends StdTokenParsers with ImplicitConversions {
   //TODO
   lazy val BindingPattern = opt(stringLit)
 
-  //TODO
-
-  //TODO
-  lazy val LexicalDeclaration = opt(stringLit)
-
-  //TODO
-  lazy val GeneratorDeclaration = opt(stringLit)
 
   //TODO
   lazy val AmbientLexicalDeclaration = opt(stringLit)
@@ -66,15 +57,9 @@ class Parser extends StdTokenParsers with ImplicitConversions {
 
   lazy val VariableStatement = VariableDeclaration
 
-  /**
-    * ECMA-262 A.3 Statements
-    */
-  lazy val Statement = Declaration | VariableDeclaration
 
   //Modified
-  lazy val Declaration = HoistableDeclaration | ClassDeclaration | LexicalDeclaration | InterfaceDeclaration | TypeAliasDeclaration | EnumDeclaration
-
-  lazy val HoistableDeclaration = FunctionDeclaration | GeneratorDeclaration
+  override lazy val Declaration: Parser[_] = HoistableDeclaration | ClassDeclaration | LexicalDeclaration | InterfaceDeclaration | TypeAliasDeclaration | EnumDeclaration
 
 
   /**
@@ -92,11 +77,11 @@ class Parser extends StdTokenParsers with ImplicitConversions {
 
   lazy val TypeArgument = Type
 
-  lazy val Type: Parser[_] = UnionOrIntersectionOrPrimaryType | FunctionType | ConstructorType
+  lazy val Type: Parser[_] = UnionType | IntersectionType | PrimaryType | FunctionType | ConstructorType
 
-  lazy val UnionOrIntersectionOrPrimaryType: Parser[_] = UnionType | IntersectionOrPrimaryType
+  //lazy val UnionOrIntersectionOrPrimaryType: Parser[_] = UnionType | IntersectionType | PrimaryType
 
-  lazy val IntersectionOrPrimaryType: Parser[_] = IntersectionType | PrimaryType
+  //lazy val IntersectionOrPrimaryType: Parser[_] = IntersectionType | PrimaryType
 
   lazy val PrimaryType = ParenthesizedType | PredefinedType | TypeReference | ObjectType | ArrayType | TupleType | TypeQuery
 
@@ -126,9 +111,11 @@ class Parser extends StdTokenParsers with ImplicitConversions {
 
   lazy val TupleElementType = Type
 
-  lazy val UnionType = (UnionOrIntersectionOrPrimaryType <~ "|") ~ IntersectionOrPrimaryType
+  //TODO
+  //lazy val UnionType:Parser[_] = ((UnionType | IntersectionType | PrimaryType) <~ "|") ~ (IntersectionType | PrimaryType)
+  lazy val UnionType: Parser[_] = repsep(PrimaryType, "|")
 
-  lazy val IntersectionType = (IntersectionOrPrimaryType <~ "&") ~ PrimaryType
+  lazy val IntersectionType: Parser[_] = ((IntersectionType | PrimaryType) <~ "&") ~ PrimaryType
 
   lazy val FunctionType = ((opt(TypeParameters) <~ "(") ~ opt(ParameterList) <~ ")" ~ "=>") ~ Type
 
@@ -184,7 +171,7 @@ class Parser extends StdTokenParsers with ImplicitConversions {
     * A.3 Statements
     */
   //Modified
-  lazy val VariableDeclaration = SimpleVariableDeclaration | DestructuringVariableDeclaration
+  override lazy val VariableDeclaration: Parser[_] = SimpleVariableDeclaration | DestructuringVariableDeclaration
 
   lazy val SimpleVariableDeclaration = BindingIdentifier ~ opt(TypeAnnotation) ~ opt(Initializer)
 
@@ -194,7 +181,7 @@ class Parser extends StdTokenParsers with ImplicitConversions {
     * A.4 Functions
     */
   //Modified
-  lazy val FunctionDeclaration = "function" ~ opt(BindingIdentifier) ~ CallSignature ~ (("{" ~ FunctionBody ~ "}") | ";")
+  override lazy val FunctionDeclaration = "function" ~ opt(BindingIdentifier) ~ CallSignature ~ (("{" ~ FunctionBody ~ "}") | ";")
 
   /**
     * A.5 Interfaces
@@ -211,7 +198,7 @@ class Parser extends StdTokenParsers with ImplicitConversions {
     * A.6 Classes
     */
   //Modified
-  lazy val ClassDeclaration = "class" ~ opt(BindingIdentifier) ~ opt(TypeParameters) ~ ClassHeritage ~ "{" ~ ClassBody ~ "}"
+  override lazy val ClassDeclaration = "class" ~ opt(BindingIdentifier) ~ opt(TypeParameters) ~ ClassHeritage ~ "{" ~ ClassBody ~ "}"
 
   //Modified
   lazy val ClassHeritage = opt(ClassExtendsClause) ~ opt(ImplementsClause)

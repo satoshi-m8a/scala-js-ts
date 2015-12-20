@@ -20,20 +20,21 @@ class ParserSpec extends FlatSpec with Matchers {
     parse(parser.InterfaceDeclaration) {
       """
         |interface i {
+        | x:number;
         |}
       """.stripMargin
     } shouldBe a[Right[_, _]]
+  }
 
-    it should "parse AmbientModuleDeclaration" in {
-      parse(parser.AmbientModuleDeclaration) {
-        """
-          |declare module "mname" {
-          | interface i {
-          |
-          | }
-          |}
-        """.stripMargin
-      } shouldBe a[Right[_, _]]
-    }
+  "parser" should "parse AmbientModuleDeclaration" in {
+    parse(parser.AmbientModuleDeclaration) {
+      """
+        |declare module "mname" {
+        | interface i {
+        |
+        | }
+        |}
+      """.stripMargin
+    } shouldBe a[Right[_, _]]
   }
 }
