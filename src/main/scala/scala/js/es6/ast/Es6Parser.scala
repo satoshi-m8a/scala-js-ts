@@ -1,6 +1,6 @@
 package scala.js.es6.ast
 
-import scala.util.parsing.combinator.{PackratParsers, ImplicitConversions}
+import scala.util.parsing.combinator.PackratParsers
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 
 class Es6Parser extends StdTokenParsers with PackratParsers {
@@ -27,7 +27,11 @@ class Es6Parser extends StdTokenParsers with PackratParsers {
 
   lazy val AssignmentExpression = stringLit
 
-  lazy val Initializer = "=" ~ AssignmentExpression
+  lazy val Initializer: PackratParser[_] = "=" ~ AssignmentExpression
+
+  lazy val StringLiteral = stringLit
+
+  lazy val NumericLiteral = numericLit
 
   /**
     * ECMA-262 A.3 Statements

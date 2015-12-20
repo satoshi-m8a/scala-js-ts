@@ -7,11 +7,15 @@ class Parser extends Es6Parser {
   override val lexical = new Tokens
 
   lexical.reserved ++= List(
-    "declare", "module", "var", "interface"
+    "declare", "module", "var", "let", "const", "interface", "import", "from", "as",
+    "any", "number", "boolean", "string", "symbol", "void",
+    "new", "type", "default", "typeof", "extends",
+    "public", "private", "protected", "function", "Function",
+    "export"
   )
 
   lexical.delimiters ++= List(
-    "{", "}", ";", ":", "<", ">", ","
+    "{", "}", ";", ":", "<", ">", ",", "|", "=>", "=", "(", ")", "?", "[", "]", "...", "&"
   )
 
   lazy val LineTerminator = "\n"
@@ -20,13 +24,13 @@ class Parser extends Es6Parser {
   lazy val ClassBody = opt(stringLit)
 
   //TODO
-  lazy val BindingPattern = opt(stringLit)
+  lazy val BindingPattern: PackratParser[_] = opt(stringLit)
 
 
   //TODO
   lazy val AmbientLexicalDeclaration = opt(stringLit)
 
-  lazy val BindingIdentifier = ident
+  lazy val BindingIdentifier: PackratParser[_] = ident | "type"
 
   lazy val IdentifierReference = ident
 
@@ -66,19 +70,21 @@ class Parser extends Es6Parser {
 
   lazy val TypeArguments = "<" ~> rep1sep(TypeArgument, ",") <~ ">"
 
-  lazy val TypeArgument = Type
+  lazy val TypeArgument: PackratParser[_] = Type
 
-  lazy val Type: PackratParser[_] = UnionOrIntersectionOrPrimaryType | FunctionType | ConstructorType
+  //not equivalent to original
+  lazy val Type: PackratParser[_] = (UnionType | IntersectionType | PrimaryType) | ConstructorType | FunctionType
 
-  lazy val UnionOrIntersectionOrPrimaryType: PackratParser[_] = UnionType | IntersectionOrPrimaryType
+  lazy val UnionOrIntersectionOrPrimaryType: PackratParser[_] =  UnionType | PrimaryType | IntersectionType
 
-  lazy val IntersectionOrPrimaryType: PackratParser[_] = IntersectionType | PrimaryType
+  lazy val IntersectionOrPrimaryType: PackratParser[_] = PrimaryType | IntersectionType
 
-  lazy val PrimaryType: PackratParser[_] = ParenthesizedType | PredefinedType | TypeReference | ObjectType | ArrayType | TupleType | TypeQuery
+  lazy val PrimaryType: PackratParser[_] = TypeQuery | TupleType | ArrayType | ObjectType | TypeReference | PredefinedType | ParenthesizedType
 
-  lazy val ParenthesizedType = "(" ~> Type <~ ")"
+  lazy val ParenthesizedType: PackratParser[_] = "(" ~> Type <~ ")"
 
-  lazy val PredefinedType = ("any" | "number" | "boolean" | "string" | "symbol" | "void")
+  //not equivalent to original
+  lazy val PredefinedType = "Function" | "any" | "number" | "boolean" | "string" | "symbol" | "void"
 
   lazy val TypeReference = (TypeName <~ not(LineTerminator)) ~ opt(TypeArguments)
 
@@ -92,7 +98,7 @@ class Parser extends Es6Parser {
 
   lazy val TypeMemberList = rep1sep(TypeMember, ";" | ",")
 
-  lazy val TypeMember = PropertySignature | CallSignature | ConstructSignature | IndexSignature | MethodSignature
+  lazy val TypeMember: PackratParser[_] = MethodSignature | IndexSignature | ConstructSignature | CallSignature | PropertySignature
 
   lazy val ArrayType: PackratParser[_] = PrimaryType <~ not(LineTerminator) ~ "[" ~ "]"
 
@@ -102,50 +108,48 @@ class Parser extends Es6Parser {
 
   lazy val TupleElementType = Type
 
-  lazy val UnionType: PackratParser[_] = UnionOrIntersectionOrPrimaryType ~ "|" ~ IntersectionOrPrimaryType
+  lazy val UnionType: PackratParser[_] = ((UnionOrIntersectionOrPrimaryType ~> "|") ~ IntersectionOrPrimaryType)
 
-  lazy val IntersectionType: PackratParser[_] = ((IntersectionType | PrimaryType) <~ "&") ~ PrimaryType
+  lazy val IntersectionType: PackratParser[_] = (IntersectionOrPrimaryType <~ "&") ~ PrimaryType
 
-  lazy val FunctionType = ((opt(TypeParameters) <~ "(") ~ opt(ParameterList) <~ ")" ~ "=>") ~ Type
+  lazy val FunctionType: PackratParser[_] = ((opt(TypeParameters) <~ "(") ~ opt(ParameterList) <~ ")" ~ "=>") ~ Type
 
-  lazy val ConstructorType = ("new" ~> opt(TypeParameters) <~ "(") ~ (opt(ParameterList) <~ ")" ~ "=>") ~ Type
+  lazy val ConstructorType: PackratParser[_] = ("new" ~> opt(TypeParameters) <~ "(") ~ (opt(ParameterList) <~ ")" ~ "=>") ~ Type
 
-  lazy val TypeQuery = "typeof" ~ TypeQueryExpression
+  lazy val TypeQuery: PackratParser[_] = "typeof" ~ TypeQueryExpression
 
   lazy val TypeQueryExpression: PackratParser[_] = IdentifierReference | (TypeQueryExpression ~ "." ~ IdentifierName)
 
-  lazy val PropertySignature = PropertyName ~ opt("?") ~ opt(TypeAnnotation)
+  lazy val PropertySignature: PackratParser[_] = PropertyName ~ opt("?") ~ opt(TypeAnnotation)
 
-  lazy val PropertyName = (ident | stringLit | numericLit)
+  //not equivalent to original
+  lazy val PropertyName = (IdentifierName | StringLiteral | NumericLiteral | "type")
 
-  lazy val TypeAnnotation = ":" ~> Type
-
+  lazy val TypeAnnotation: PackratParser[_] = ":" ~> Type
 
   lazy val CallSignature = (opt(TypeParameters) <~ "(") ~ (opt(ParameterList) <~ ")") ~ opt(TypeAnnotation)
 
-  lazy val ParameterList = (RequiredParameterList | OptionalParameterList | RestParameter) |
-    (RequiredParameterList ~ "," ~ OptionalParameterList) |
-    (RequiredParameterList ~ "," ~ RestParameter) |
-    (OptionalParameterList ~ "," ~ RestParameter) |
-    (RequiredParameterList ~ "," ~ OptionalParameterList ~ "," ~ RestParameter)
+  lazy val ParameterList: PackratParser[_] =
+    (repsep(RequiredParameter, ",") ~ ",".? ~ repsep(OptionalParameter, ",") ~ ",".?  ~ opt(RestParameter))
 
-  lazy val RequiredParameterList = rep1sep(RequiredParameter, ",")
 
-  lazy val RequiredParameter = (opt(AccessibilityModifier) ~ BindingIdentifierOrPattern ~ opt(TypeAnnotation)) |
+  lazy val RequiredParameterList: PackratParser[_] = (RequiredParameterList ~ "," ~ RequiredParameter) | RequiredParameter
+
+  lazy val RequiredParameter: PackratParser[_] = (opt(AccessibilityModifier) ~ BindingIdentifierOrPattern ~ opt(TypeAnnotation)) |
     (BindingIdentifier ~ ":" ~ stringLit)
 
-  lazy val AccessibilityModifier = ("public" | "private" | "protected")
+  lazy val AccessibilityModifier: PackratParser[_] = ("public" | "private" | "protected")
 
-  lazy val BindingIdentifierOrPattern = BindingIdentifier | BindingPattern
+  lazy val BindingIdentifierOrPattern: PackratParser[_] = BindingIdentifier | BindingPattern
 
-  lazy val OptionalParameterList = rep1sep(OptionalParameter, ",")
+  lazy val OptionalParameterList: PackratParser[_] = (OptionalParameterList ~ "," ~ OptionalParameter) | OptionalParameter
 
-  lazy val OptionalParameter =
+  lazy val OptionalParameter: PackratParser[_] =
     (opt(AccessibilityModifier) ~ BindingIdentifierOrPattern ~ "?" ~ opt(TypeAnnotation)) |
       (opt(AccessibilityModifier) ~ BindingIdentifierOrPattern ~ opt(TypeAnnotation) ~ Initializer) |
       (BindingIdentifier ~ "?" ~ ":" ~ stringLit)
 
-  lazy val RestParameter = "..." ~> BindingIdentifier ~ opt(TypeAnnotation)
+  lazy val RestParameter: PackratParser[_] = "..." ~> BindingIdentifier ~ opt(TypeAnnotation)
 
   lazy val ConstructSignature = "new" ~ opt(TypeParameters) ~ "(" ~ opt(ParameterList) ~ ")" ~ opt(TypeAnnotation)
 

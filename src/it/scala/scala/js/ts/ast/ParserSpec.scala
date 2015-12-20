@@ -9,8 +9,8 @@ import scala.io.Source
 class ParserSpec extends FlatSpec with Matchers {
 
   val testFiles = Seq(
-    //"./DefinitelyTyped/jquery/jquery.d.ts",
-    //"./DefinitelyTyped/acc-wizard/acc-wizard.d.ts",
+    "./DefinitelyTyped/jquery/jquery.d.ts",
+    "./DefinitelyTyped/acc-wizard/acc-wizard.d.ts",
     //"./DefinitelyTyped/adm-zip/adm-zip.d.ts",
     "./DefinitelyTyped/add2home/add2home.d.ts"
   ).map(f => new File(f))
