@@ -17,16 +17,7 @@ class Parser extends Es6Parser {
   lazy val LineTerminator = "\n"
 
   //TODO
-  lazy val AssignmentExpression = stringLit
-
-  //TODO
-  lazy val FunctionBody = opt(stringLit)
-
-  //TODO
   lazy val ClassBody = opt(stringLit)
-
-  //TODO
-  lazy val Initializer = "=" ~ opt(stringLit)
 
   //TODO
   lazy val BindingPattern = opt(stringLit)
@@ -59,7 +50,7 @@ class Parser extends Es6Parser {
 
 
   //Modified
-  override lazy val Declaration: Parser[_] = HoistableDeclaration | ClassDeclaration | LexicalDeclaration | InterfaceDeclaration | TypeAliasDeclaration | EnumDeclaration
+  override lazy val Declaration: PackratParser[_] = HoistableDeclaration | ClassDeclaration | LexicalDeclaration | InterfaceDeclaration | TypeAliasDeclaration | EnumDeclaration
 
 
   /**
@@ -77,13 +68,13 @@ class Parser extends Es6Parser {
 
   lazy val TypeArgument = Type
 
-  lazy val Type: Parser[_] = UnionType | IntersectionType | PrimaryType | FunctionType | ConstructorType
+  lazy val Type: PackratParser[_] = UnionOrIntersectionOrPrimaryType | FunctionType | ConstructorType
 
-  //lazy val UnionOrIntersectionOrPrimaryType: Parser[_] = UnionType | IntersectionType | PrimaryType
+  lazy val UnionOrIntersectionOrPrimaryType: PackratParser[_] = UnionType | IntersectionOrPrimaryType
 
-  //lazy val IntersectionOrPrimaryType: Parser[_] = IntersectionType | PrimaryType
+  lazy val IntersectionOrPrimaryType: PackratParser[_] = IntersectionType | PrimaryType
 
-  lazy val PrimaryType = ParenthesizedType | PredefinedType | TypeReference | ObjectType | ArrayType | TupleType | TypeQuery
+  lazy val PrimaryType: PackratParser[_] = ParenthesizedType | PredefinedType | TypeReference | ObjectType | ArrayType | TupleType | TypeQuery
 
   lazy val ParenthesizedType = "(" ~> Type <~ ")"
 
@@ -103,7 +94,7 @@ class Parser extends Es6Parser {
 
   lazy val TypeMember = PropertySignature | CallSignature | ConstructSignature | IndexSignature | MethodSignature
 
-  lazy val ArrayType: Parser[_] = PrimaryType <~ not(LineTerminator) ~ "[" ~ "]"
+  lazy val ArrayType: PackratParser[_] = PrimaryType <~ not(LineTerminator) ~ "[" ~ "]"
 
   lazy val TupleType = "[" ~> TupleElementTypes <~ "]"
 
@@ -111,11 +102,9 @@ class Parser extends Es6Parser {
 
   lazy val TupleElementType = Type
 
-  //TODO
-  //lazy val UnionType:Parser[_] = ((UnionType | IntersectionType | PrimaryType) <~ "|") ~ (IntersectionType | PrimaryType)
-  lazy val UnionType: Parser[_] = repsep(PrimaryType, "|")
+  lazy val UnionType: PackratParser[_] = UnionOrIntersectionOrPrimaryType ~ "|" ~ IntersectionOrPrimaryType
 
-  lazy val IntersectionType: Parser[_] = ((IntersectionType | PrimaryType) <~ "&") ~ PrimaryType
+  lazy val IntersectionType: PackratParser[_] = ((IntersectionType | PrimaryType) <~ "&") ~ PrimaryType
 
   lazy val FunctionType = ((opt(TypeParameters) <~ "(") ~ opt(ParameterList) <~ ")" ~ "=>") ~ Type
 
@@ -123,7 +112,7 @@ class Parser extends Es6Parser {
 
   lazy val TypeQuery = "typeof" ~ TypeQueryExpression
 
-  lazy val TypeQueryExpression: Parser[_] = IdentifierReference | (TypeQueryExpression ~ "." ~ IdentifierName)
+  lazy val TypeQueryExpression: PackratParser[_] = IdentifierReference | (TypeQueryExpression ~ "." ~ IdentifierName)
 
   lazy val PropertySignature = PropertyName ~ opt("?") ~ opt(TypeAnnotation)
 
@@ -171,7 +160,7 @@ class Parser extends Es6Parser {
     * A.3 Statements
     */
   //Modified
-  override lazy val VariableDeclaration: Parser[_] = SimpleVariableDeclaration | DestructuringVariableDeclaration
+  override lazy val VariableDeclaration: PackratParser[_] = SimpleVariableDeclaration | DestructuringVariableDeclaration
 
   lazy val SimpleVariableDeclaration = BindingIdentifier ~ opt(TypeAnnotation) ~ opt(Initializer)
 
@@ -181,7 +170,7 @@ class Parser extends Es6Parser {
     * A.4 Functions
     */
   //Modified
-  override lazy val FunctionDeclaration = "function" ~ opt(BindingIdentifier) ~ CallSignature ~ (("{" ~ FunctionBody ~ "}") | ";")
+  override lazy val FunctionDeclaration: PackratParser[_] = "function" ~ opt(BindingIdentifier) ~ CallSignature ~ (("{" ~ FunctionBody ~ "}") | ";")
 
   /**
     * A.5 Interfaces
@@ -198,7 +187,7 @@ class Parser extends Es6Parser {
     * A.6 Classes
     */
   //Modified
-  override lazy val ClassDeclaration = "class" ~ opt(BindingIdentifier) ~ opt(TypeParameters) ~ ClassHeritage ~ "{" ~ ClassBody ~ "}"
+  override lazy val ClassDeclaration: PackratParser[_] = "class" ~ opt(BindingIdentifier) ~ opt(TypeParameters) ~ ClassHeritage ~ "{" ~ ClassBody ~ "}"
 
   //Modified
   lazy val ClassHeritage = opt(ClassExtendsClause) ~ opt(ImplementsClause)
@@ -229,7 +218,7 @@ class Parser extends Es6Parser {
 
   lazy val IdentifierPath = rep1sep(BindingIdentifier, ".")
 
-  lazy val NamespaceBody: Parser[_] = opt(NamespaceElements)
+  lazy val NamespaceBody: PackratParser[_] = opt(NamespaceElements)
 
   lazy val NamespaceElements = rep1(NamespaceElement)
 
@@ -305,7 +294,7 @@ class Parser extends Es6Parser {
 
   lazy val AmbientNamespaceElements = rep1(AmbientNamespaceElement)
 
-  lazy val AmbientNamespaceElement: Parser[_] = opt("export") ~ (AmbientVariableDeclaration | AmbientLexicalDeclaration | AmbientFunctionDeclaration | AmbientClassDeclaration | InterfaceDeclaration | AmbientEnumDeclaration | AmbientNamespaceDeclaration | ImportAliasDeclaration)
+  lazy val AmbientNamespaceElement: PackratParser[_] = opt("export") ~ (AmbientVariableDeclaration | AmbientLexicalDeclaration | AmbientFunctionDeclaration | AmbientClassDeclaration | InterfaceDeclaration | AmbientEnumDeclaration | AmbientNamespaceDeclaration | ImportAliasDeclaration)
 
   lazy val AmbientModuleDeclaration = "declare" ~ "module" ~ stringLit ~ "{" ~ DeclarationModule ~ "}"
 
@@ -316,8 +305,10 @@ object Parser {
     val parser = new Parser
 
     parser.phrase(parser.DeclarationSourceFile)(new parser.lexical.Scanner(input)) match {
-      case parser.Success(result, _) => Some(result)
-      case parser.NoSuccess(errorMessage, next) => None
+      case parser.Success(result, _) => Right(result)
+      case parser.NoSuccess(errorMessage, next) => {
+        Left(s"$errorMessage on line ${next.pos.line} on column ${next.pos.column}")
+      }
     }
   }
 }

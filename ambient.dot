@@ -1,0 +1,31 @@
+digraph ambient {
+    "AmbientModuleDeclaration" -> "DeclarationModule";
+    "DeclarationModule" -> "DeclarationModuleElements";
+    "DeclarationModuleElements" -> "DeclarationModuleElement";
+
+    "DeclarationModuleElement" -> "DeclarationElement";
+    "DeclarationModuleElement" ->"ImportDeclaration";
+    "DeclarationModuleElement" ->"ImportAliasDeclaration";
+    "DeclarationModuleElement" ->"ExportDeclarationElement";
+    "DeclarationModuleElement" ->"ExportDefaultDeclarationElement";
+    "DeclarationModuleElement" ->"ExportListDeclaration";
+    "DeclarationModuleElement" ->"ExportAssignment";
+
+    "DeclarationElement" -> "InterfaceDeclaration";
+    "DeclarationElement" -> "TypeAliasDeclaration";
+    "DeclarationElement" -> "NamespaceDeclaration";
+    "DeclarationElement" -> "AmbientDeclaration";
+    "DeclarationElement" -> "ImportAliasDeclaration";
+
+    "ImportAliasDeclaration" -> "BindingIdentifier";
+    "ImportAliasDeclaration" -> "EntityName";
+
+    "ExportDeclarationElement" -> "InterfaceDeclaration";
+    "ExportDeclarationElement" -> "TypeAliasDeclaration";
+    "ExportDeclarationElement" -> "AmbientDeclaration";
+    "ExportDeclarationElement" -> "ImportAliasDeclaration";
+
+    "ExportDefaultDeclarationElement"->"AmbientFunctionDeclaration";
+    "ExportDefaultDeclarationElement"->"AmbientClassDeclaration";
+
+}

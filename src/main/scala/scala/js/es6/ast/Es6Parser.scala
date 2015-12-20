@@ -1,25 +1,33 @@
 package scala.js.es6.ast
 
-import scala.util.parsing.combinator.ImplicitConversions
+import scala.util.parsing.combinator.{PackratParsers, ImplicitConversions}
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 
-class Es6Parser extends StdTokenParsers with ImplicitConversions {
+class Es6Parser extends StdTokenParsers with PackratParsers {
 
   type Tokens = Es6Lexer
   val lexical = new Tokens
 
 
-  lazy val ClassDeclaration:Parser[_] = ""
+  lazy val FunctionBody = FunctionStatementList
 
-  lazy val VariableDeclaration: Parser[_] = ""
+  lazy val FunctionStatementList:PackratParser[_] = opt(stringLit)
 
-  lazy val FunctionDeclaration: Parser[_] = ""
+  lazy val ClassDeclaration: PackratParser[_] = opt(stringLit)
+
+  lazy val VariableDeclaration: PackratParser[_] = opt(stringLit)
+
+  lazy val FunctionDeclaration: PackratParser[_] = opt(stringLit)
 
   //TODO
   lazy val GeneratorDeclaration = opt(stringLit)
 
   //TODO
   lazy val LexicalDeclaration = opt(stringLit)
+
+  lazy val AssignmentExpression = stringLit
+
+  lazy val Initializer = "=" ~ AssignmentExpression
 
   /**
     * ECMA-262 A.3 Statements
